@@ -31,8 +31,8 @@ define root view entity ZDES_TRAVEL_I
       local_last_changed_at as LocalLastChangedAt,
 
 
-      @Semantics.systemDateTime.lastChangedAt: true
-      last_changed_at       as LastChangedAt,
+      @Semantics.systemDateTime.lastChangedAt: true    // this annotation ensures the field lastcahngeAt use for DRAFT  
+      last_changed_at       as LastChangedAt, 
 
       _Booking // Make association public
 }
