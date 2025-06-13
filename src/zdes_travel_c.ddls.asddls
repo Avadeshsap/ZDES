@@ -1,8 +1,9 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Travel Root Consumption Entity'
-@Metadata.ignorePropagatedAnnotations: true
+@Metadata.allowExtensions: true
 @VDM.viewType: #CONSUMPTION
-define root view entity ZDES_TRAVEL_C as projection on ZDES_TRAVEL_I
+define root view entity ZDES_TRAVEL_C
+  provider contract transactional_query as projection on ZDES_TRAVEL_I
 {
     key TravelUuid,
     TravelId,
