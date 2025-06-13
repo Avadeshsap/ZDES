@@ -1,0 +1,6 @@
+@EndUserText.label: 'Service Def for Travel'
+define service ZDES_TRAVEL_SD {
+  expose ZDES_TRAVEL_C;
+  expose ZDES_BOOKING_C;
+  expose ZDES_BKSUPPL_C;
+}

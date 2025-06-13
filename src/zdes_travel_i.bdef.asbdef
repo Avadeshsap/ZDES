@@ -52,7 +52,7 @@ etag master LocalLastChangedAt
   delete; // user can delete/cancel the Booking and its child Booking suppl
   field (readonly) TravelUuid;
   field ( numbering : managed, readonly ) BookingUuid; // this one also generate by RAP framework and it is non editable
-  association _Travel{ }
+  association _Travel;
   association _BookingSupplement { create; } //users can do the booking suppl to the current booking under the travel
 
 
@@ -79,16 +79,31 @@ etag master LocalLastChangedAt
 
 
 
-define behavior for ZDES_BKSUPPL_I //alias <alias_name>
+define behavior for ZDES_BKSUPPL_I alias BookingSuppl
 persistent table zdes_bksuppl
 lock dependent by _Travel
 authorization dependent by _Travel
-//etag master <field_name>
+etag master LocalLastChangedAt
 {
   update;
   delete;
-  field ( readonly ) BooksupplUuid;
+  field ( numbering : managed , readonly ) BooksupplUuid;
+
   field (readonly) BookingUUID ,TravelUUID;
   association _Travel;
   association _Booking;
+
+  mapping for ZDES_BKSUPPL
+  {
+
+    BooksupplUuid = booksuppl_uuid;
+    TravelUUID = root_uuid;
+    BookingUUID = parent_uuid;
+    BookingSupplementId = booking_supplement_id;
+    SupplementId = supplement_id;
+    Price = price;
+    CurrencyCode = currency_code;
+    LocalLastChangedAt = local_last_changed_at;
+  }
+
 }
