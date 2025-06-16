@@ -1,6 +1,7 @@
 @AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Booking Suppl Consumption entity'
 @Metadata.ignorePropagatedAnnotations: true
+@Metadata.allowExtensions: true
 define view entity ZDES_BKSUPPL_C as projection on ZDES_BKSUPPL_I
 {
     key BooksupplUuid,
