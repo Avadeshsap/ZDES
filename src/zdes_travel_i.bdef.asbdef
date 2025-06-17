@@ -1,9 +1,13 @@
 managed implementation in class zbp_des_travel_i unique;
 strict ( 2 ); // this ensure we are follwing strict syntax
 
+with draft;
+
 define behavior for ZDES_TRAVEL_I alias Travel
 persistent table zdes_travel
+draft table zdes_d_travel
 lock master
+total etag LastChangedAt
 authorization master ( global,instance )
 etag master LocalLastChangedAt   // system detect the latest timestamp and  prevent overwrite
 {
@@ -11,8 +15,14 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   update;  // users can update or edit the existing travels
   delete;  // users can cancel / delete the entrire travel ( incluing its child booking and booksuppl)
   field(numbering : managed,readonly)TravelUuid; // non editable field on the fiori screen
-  association _Booking { create; } //users can do the bookings to the current travel
+  association _Booking { create; with draft; } //users can do the bookings to the current travel
 
+
+  draft action Edit;
+  draft action Discard;
+  draft action Resume;
+  draft action Activate optimized;
+  draft determine action Prepare;
 
  // Do mapping between CDS entity Alias names and Data base level fields
  mapping for zdes_travel
@@ -44,6 +54,7 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
 
 define behavior for ZDES_BOOKING_I alias Booking
 persistent table zdes_booking
+draft table zdes_d_booking
 lock dependent by _Travel
 authorization dependent by _Travel
 etag master LocalLastChangedAt
@@ -52,8 +63,8 @@ etag master LocalLastChangedAt
   delete; // user can delete/cancel the Booking and its child Booking suppl
   field (readonly) TravelUuid;
   field ( numbering : managed, readonly ) BookingUuid; // this one also generate by RAP framework and it is non editable
-  association _Travel;
-  association _BookingSupplement { create; } //users can do the booking suppl to the current booking under the travel
+  association _Travel { with draft;}
+  association _BookingSupplement { create; with draft; } //users can do the booking suppl to the current booking under the travel
 
 
 
@@ -81,6 +92,7 @@ etag master LocalLastChangedAt
 
 define behavior for ZDES_BKSUPPL_I alias BookingSuppl
 persistent table zdes_bksuppl
+draft table zdes_d_bksuppl
 lock dependent by _Travel
 authorization dependent by _Travel
 etag master LocalLastChangedAt
@@ -90,8 +102,8 @@ etag master LocalLastChangedAt
   field ( numbering : managed , readonly ) BooksupplUuid;
 
   field (readonly) BookingUUID ,TravelUUID;
-  association _Travel;
-  association _Booking;
+  association _Travel { with draft;}
+  association _Booking { with draft;}
 
   mapping for ZDES_BKSUPPL
   {
