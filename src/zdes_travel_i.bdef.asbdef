@@ -15,6 +15,7 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   update;  // users can update or edit the existing travels
   delete;  // users can cancel / delete the entrire travel ( incluing its child booking and booksuppl)
   field(numbering : managed,readonly)TravelUuid; // non editable field on the fiori screen
+  field(readonly) TravelId , OverallStatus ;
   association _Booking { create; with draft; } //users can do the bookings to the current travel
 
 
@@ -23,6 +24,14 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   draft action Resume;
   draft action Activate optimized;
   draft determine action Prepare;
+
+
+
+//Determinations
+determination setTravelId on save { create; update; }
+determination setOverallStatus on modify { create; update;}
+
+
 
  // Do mapping between CDS entity Alias names and Data base level fields
  mapping for zdes_travel
