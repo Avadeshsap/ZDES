@@ -106,6 +106,26 @@ ENDCLASS.
 CLASS lhc_booking IMPLEMENTATION.
 
   METHOD SetBookingDate.
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+           ENTITY Booking
+           FIELDS ( BookingDate )
+           WITH CORRESPONDING #( keys )
+           RESULT DATA(Bookings).
+
+    DELETE bookings WHERE BookingDate IS NOT INITIAL.
+
+    CHECK bookings IS NOT INITIAL.
+
+    LOOP AT bookings ASSIGNING FIELD-SYMBOL(<booking>).
+
+      <booking>-BookingDate = cl_abap_context_info=>get_system_date( ).
+
+    ENDLOOP.
+
+    MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
+           ENTITY Booking
+           UPDATE FIELDS ( BookingDate )
+           WITH CORRESPONDING #( Bookings ).
   ENDMETHOD.
 
   METHOD SetBookingId.
