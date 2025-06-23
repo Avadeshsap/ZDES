@@ -1,3 +1,4 @@
+
 managed implementation in class zbp_des_travel_i unique;
 strict ( 2 ); // this ensure we are follwing strict syntax
 
@@ -70,11 +71,14 @@ etag master LocalLastChangedAt
 {
   update; // user can update or edit the booking once they inside the travel instance
   delete; // user can delete/cancel the Booking and its child Booking suppl
-  field (readonly) TravelUuid;
+  field (readonly) TravelUuid , BookingId , BookingDate;
   field ( numbering : managed, readonly ) BookingUuid; // this one also generate by RAP framework and it is non editable
   association _Travel { with draft;}
   association _BookingSupplement { create; with draft; } //users can do the booking suppl to the current booking under the travel
 
+
+  determination SetBookingId on save { create; }
+  determination SetBookingDate on save {create;}
 
 
   mapping for ZDES_BOOKING
@@ -110,9 +114,12 @@ etag master LocalLastChangedAt
   delete;
   field ( numbering : managed , readonly ) BooksupplUuid;
 
-  field (readonly) BookingUUID ,TravelUUID;
+  field (readonly) BookingUUID ,TravelUUID , BookingSupplementId;
   association _Travel { with draft;}
   association _Booking { with draft;}
+
+
+determination SetBookingSupplId on save { create; }
 
   mapping for ZDES_BKSUPPL
   {
