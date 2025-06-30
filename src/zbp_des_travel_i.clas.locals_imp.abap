@@ -227,6 +227,15 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR Travel~setTravelId.
     METHODS setOverallStatus FOR DETERMINE ON MODIFY
       IMPORTING keys FOR Travel~setOverallStatus.
+    METHODS acceptTravel FOR MODIFY
+      IMPORTING keys FOR ACTION Travel~acceptTravel RESULT result.
+
+    METHODS rejectTravel FOR MODIFY
+      IMPORTING keys FOR ACTION Travel~rejectTravel RESULT result.
+    METHODS deductDiscount FOR MODIFY
+      IMPORTING keys FOR ACTION Travel~deductDiscount RESULT result.
+    METHODS GetDefaultsFordeductDiscount FOR READ
+      IMPORTING keys FOR FUNCTION Travel~GetDefaultsFordeductDiscount RESULT result.
 
 ENDCLASS.
 
@@ -286,6 +295,70 @@ CLASS lhc_Travel IMPLEMENTATION.
 
 
 
+
+  ENDMETHOD.
+
+  METHOD acceptTravel.
+    MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
+        ENTITY Travel
+        UPDATE FIELDS ( OverallStatus )
+        WITH VALUE #( FOR key IN keys ( %tky = key-%tky
+                                        OverallStatus = 'A' ) ).
+
+
+
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+     ENTITY Travel
+     ALL FIELDS WITH
+     CORRESPONDING #( keys )
+     RESULT DATA(travels).
+
+    result = VALUE #( FOR travel IN travels ( %tky = travel-%tky
+                                              %param = travel ) ).
+  ENDMETHOD.
+
+  METHOD rejectTravel.
+    MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
+          ENTITY Travel
+          UPDATE FIELDS ( OverallStatus )
+          WITH VALUE #( FOR key IN keys ( %tky = key-%tky
+                                          OverallStatus = 'R' ) ).
+
+
+
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+     ENTITY Travel
+     ALL FIELDS WITH
+     CORRESPONDING #( keys )
+     RESULT DATA(travels).
+
+    result = VALUE #( FOR travel IN travels ( %tky = travel-%tky
+                                              %param = travel ) ).
+  ENDMETHOD.
+
+  METHOD deductDiscount.
+  ENDMETHOD.
+
+  METHOD GetDefaultsFordeductDiscount.
+
+
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+     ENTITY Travel
+     FIELDS ( TotalPrice )
+     WITH CORRESPONDING #( keys )
+     RESULT DATA(travels).
+
+
+    LOOP AT travels INTO DATA(travel).
+      IF travel-TotalPrice >= 4000.
+        APPEND VALUE #( %tky = travel-%tky
+                        %param-discount_percent = 30 ) TO result.
+      ELSE.
+        APPEND VALUE #( %tky = travel-%tky
+                           %param-discount_percent = 15 ) TO result.
+
+      ENDIF.
+    ENDLOOP.
 
   ENDMETHOD.
 

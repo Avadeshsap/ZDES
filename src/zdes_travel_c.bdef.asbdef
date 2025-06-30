@@ -15,6 +15,11 @@ use etag
   use action Prepare;
   use action Activate;
 
+  use action acceptTravel;
+  use action rejectTravel;
+  use action deductDiscount;
+  use function GetDefaultsFordeductDiscount;
+
   use association _Booking { create; with draft;}
 }
 
