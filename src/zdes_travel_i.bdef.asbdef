@@ -37,6 +37,7 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   action rejectTravel result [1] $self;
 
   action deductDiscount parameter ZDES_A_DISCOUNT result [1] $self {default function GetDefaultsFordeductDiscount;}
+  internal action reCalcTotalprice;
 
 
 

@@ -236,6 +236,8 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR ACTION Travel~deductDiscount RESULT result.
     METHODS GetDefaultsFordeductDiscount FOR READ
       IMPORTING keys FOR FUNCTION Travel~GetDefaultsFordeductDiscount RESULT result.
+    METHODS reCalcTotalprice FOR MODIFY
+      IMPORTING keys FOR ACTION Travel~reCalcTotalprice.
 
 ENDCLASS.
 
@@ -337,6 +339,81 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD deductDiscount.
+
+
+DATA : travel_for_update type TABLE FOR UPDATE zdes_travel_i.
+
+data(keys_temp) = keys.
+
+
+LOOP at keys_temp ASSIGNING FIELD-SYMBOL(<key_temp>) where %param-discount_percent is Initial or
+                                                                %param-discount_percent > 100 or
+                                                                %param-discount_percent < 0 .
+
+
+  APPEND VALUE #( %tky = <key_temp>-%tky ) to failed-travel.
+  APPEND VALUE #( %tky = <key_temp>-%tky
+                  %msg = new_message_with_text(  text = 'Invalid Discount percentage'
+                                                 severity = if_abap_behv_message=>severity-error )
+                  %element-totalprice  = if_abap_behv=>mk-on
+                  %action-deductDiscount = if_abap_behv=>mk-on ) to reported-travel.
+
+
+   delete keys_temp .
+
+
+ENDLOOP.
+
+CHECK keys_temp is NOT INITIAL.
+
+READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+ENTITY Travel
+FIELDS ( TotalPrice )
+WITH CORRESPONDING #( keys )
+RESULT DATA(lt_travels).
+
+
+data :lv_percentage type decfloat16.
+
+LOOP at lt_travels ASSIGNING FIELD-SYMBOL(<fs_travel>).
+
+
+DATA(lv_discount_percent) = keys[ key id %tky = <fs_travel>-%tky ]-%param-discount_percent.
+
+lv_percentage = lv_discount_percent / 100.
+
+
+data(reduced_value) = <fs_travel>-TotalPrice * lv_percentage .
+
+reduced_value = <fs_travel>-TotalPrice - reduced_value.
+
+APPEND VALUE #( %tky = <fs_travel>-%tky
+
+                 totalprice = reduced_value  ) to travel_for_update .
+
+
+ENDLOOP.
+
+
+
+MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
+ENTITY travel
+UPDATE FIELDS ( totalprice )
+with  travel_for_update .
+
+READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+ENTITY travel
+ALL FIELDS WITH
+CORRESPONDING #( keys )
+RESULT data(lt_travel_updated).
+
+
+
+result = value #( for ls_travel in lt_travel_updated  ( %tky = ls_travel-%tky
+                                                        %param = ls_travel )  ).
+
+
+
   ENDMETHOD.
 
   METHOD GetDefaultsFordeductDiscount.
@@ -359,6 +436,41 @@ CLASS lhc_Travel IMPLEMENTATION.
 
       ENDIF.
     ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD reCalcTotalprice.
+
+
+
+READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+ENTITY travel
+FIELDS ( bookingfee currencycode )
+WITH CORRESPONDING #( keys )
+RESULT data(travels).
+
+
+read ENTITIES OF zdes_travel_i IN LOCAL MODE
+ENTITY travel by \_booking
+FIELDS ( flightprice currencycode )
+with CORRESPONDING  #( travels )
+RESULT DATA(bookings)
+link DATA(booking_links).
+
+
+READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+ENTITY booking by \_BookingSupplement
+FIELDS ( price currencycode )
+with CORRESPONDING #( bookings  )
+link data(bookingsuppliments_links).
+
+
+
+
+
+
+
+
 
   ENDMETHOD.
 
