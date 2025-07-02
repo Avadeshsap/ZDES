@@ -37,6 +37,8 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   action rejectTravel result [1] $self;
 
   action deductDiscount parameter ZDES_A_DISCOUNT result [1] $self {default function GetDefaultsFordeductDiscount;}
+
+  determination calculateTotalPrice on modify { create; field BookingFee , CurrencyCode ; }
   internal action reCalcTotalprice;
 
 
@@ -87,6 +89,14 @@ etag master LocalLastChangedAt
   determination SetBookingId on save { create; }
   determination SetBookingDate on save { create; }
 
+  determination calculateTotalPrice on modify { create; field FlightPrice, CurrencyCode ;  }
+
+  side effects {
+
+   field FlightPrice affects  field _travel.TotalPrice ;
+
+   }
+
 
   mapping for zdes_booking // do mapping between cds entity alias names and data base level fields
     {
@@ -125,6 +135,15 @@ etag master LocalLastChangedAt
 
 
   determination SetBookingSupplId on save { create; }
+
+
+   determination calculateTotalPrice on modify { create; field Price, CurrencyCode ;  }
+
+  side effects {
+
+   field Price affects  field _travel.TotalPrice ;
+
+   }
 
   mapping for zdes_bksuppl
     {
