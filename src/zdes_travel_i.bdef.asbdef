@@ -31,17 +31,26 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   //Determinations
   determination setTravelId on save { create; update; }
   determination setOverallStatus on modify { create; update; }
+  determination calculateTotalPrice on modify { create; field BookingFee, CurrencyCode; }
+
+  //Validations
+  validation validateCusomer on save { create; field CustomerId; }
+  validation validateAgency on save { create; field AgencyId; }
+  validation validateDates on save { create; field BeginDate, EndDate; }
+
 
   //Actions
   action acceptTravel result [1] $self;
   action rejectTravel result [1] $self;
-
-  action deductDiscount parameter ZDES_A_DISCOUNT result [1] $self {default function GetDefaultsFordeductDiscount;}
-
-  determination calculateTotalPrice on modify { create; field BookingFee , CurrencyCode ; }
+  action deductDiscount parameter ZDES_A_DISCOUNT result [1] $self { default function GetDefaultsFordeductDiscount; }
   internal action reCalcTotalprice;
 
+  side effects
+  {
 
+    field BookingFee affects field TotalPrice;
+
+  }
 
   // Do mapping between CDS entity Alias names and Data base level fields
   mapping for zdes_travel
@@ -89,13 +98,14 @@ etag master LocalLastChangedAt
   determination SetBookingId on save { create; }
   determination SetBookingDate on save { create; }
 
-  determination calculateTotalPrice on modify { create; field FlightPrice, CurrencyCode ;  }
+  determination calculateTotalPrice on modify { create; field FlightPrice, CurrencyCode; }
 
-  side effects {
+  side effects
+  {
 
-   field FlightPrice affects  field _travel.TotalPrice ;
+    field FlightPrice affects field _travel.TotalPrice;
 
-   }
+  }
 
 
   mapping for zdes_booking // do mapping between cds entity alias names and data base level fields
@@ -137,13 +147,14 @@ etag master LocalLastChangedAt
   determination SetBookingSupplId on save { create; }
 
 
-   determination calculateTotalPrice on modify { create; field Price, CurrencyCode ;  }
+  determination calculateTotalPrice on modify { create; field Price, CurrencyCode; }
 
-  side effects {
+  side effects
+  {
 
-   field Price affects  field _travel.TotalPrice ;
+    field Price affects field _travel.TotalPrice;
 
-   }
+  }
 
   mapping for zdes_bksuppl
     {

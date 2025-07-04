@@ -91,15 +91,15 @@ CLASS lhc_bookingsuppl IMPLEMENTATION.
 
   ENDMETHOD.
 
- METHOD calculateTotalPrice.
+  METHOD calculateTotalPrice.
 
 
 
-  READ ENTITIES OF zdes_travel_i IN LOCAL MODE
-         ENTITY BookingSuppl BY \_Travel
-         FIELDS ( TravelUuid )
-         WITH CORRESPONDING #( keys )
-         RESULT DATA(travels).
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+           ENTITY BookingSuppl BY \_Travel
+           FIELDS ( TravelUuid )
+           WITH CORRESPONDING #( keys )
+           RESULT DATA(travels).
 
     MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
            ENTITY Travel
@@ -109,7 +109,7 @@ CLASS lhc_bookingsuppl IMPLEMENTATION.
 
 
 
-ENDMETHOD.
+  ENDMETHOD.
 
 
 
@@ -242,16 +242,16 @@ CLASS lhc_booking IMPLEMENTATION.
 
   METHOD calculateTotalPrice.
 
-  READ ENTITIES OF zdes_travel_i IN LOCAL MODE
-  ENTITY Booking by \_travel
-  FIELDS ( TravelUuid )
-  WITH CORRESPONDING #( keys )
-  RESULT DATA(travels).
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+    ENTITY Booking BY \_travel
+    FIELDS ( TravelUuid )
+    WITH CORRESPONDING #( keys )
+    RESULT DATA(travels).
 
-  MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
-  ENTITY Travel
-  EXECUTE reCalcTotalprice
-  FROM CORRESPONDING #( travels ).
+    MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
+    ENTITY Travel
+    EXECUTE reCalcTotalprice
+    FROM CORRESPONDING #( travels ).
 
 
 
@@ -284,6 +284,13 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
       IMPORTING keys FOR ACTION Travel~reCalcTotalprice.
     METHODS calculateTotalPrice FOR DETERMINE ON MODIFY
       IMPORTING keys FOR Travel~calculateTotalPrice.
+    METHODS validateCusomer FOR VALIDATE ON SAVE
+      IMPORTING keys FOR Travel~validateCusomer.
+    METHODS validateAgency FOR VALIDATE ON SAVE
+      IMPORTING keys FOR Travel~validateAgency.
+
+    METHODS validateDates FOR VALIDATE ON SAVE
+      IMPORTING keys FOR Travel~validateDates.
 
 ENDCLASS.
 
@@ -550,41 +557,41 @@ CLASS lhc_Travel IMPLEMENTATION.
     ENDLOOP.
 
 
-DELETE amounts_per_currencycode where currency_code is INITIAL.
+    DELETE amounts_per_currencycode WHERE currency_code IS INITIAL.
 
-loop at amounts_per_currencycode into data(amount_per_currencycode).
-
-
-" Travel USD  - parent  - Total price
-"Booking EUR -> USD
-"Booking suppl EUR -> USD
-
-IF <travel>-CurrencyCode = amount_per_currencycode-currency_code .
-
-  <travel>-TotalPrice += amount_per_currencycode-amount.
-
-  else.
-
-  /dmo/cl_flight_amdp=>convert_currency(
-           EXPORTING
-             iv_amount                   =  amount_per_currencycode-amount
-             iv_currency_code_source     =  amount_per_currencycode-currency_code
-             iv_currency_code_target     =  <travel>-CurrencyCode
-             iv_exchange_rate_date       =  cl_abap_context_info=>get_system_date( )
-           IMPORTING
-             ev_amount                   = DATA(total_booking_price_per_curr)
-          ).
-
-  <travel>-TotalPrice += total_booking_price_per_curr.
-  ENDIF.
-
-  MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
-  ENTITY Travel
-  UPDATE FIELDS ( TotalPrice )
-  WITH CORRESPONDING #( travels ).
+    LOOP AT amounts_per_currencycode INTO DATA(amount_per_currencycode).
 
 
-ENDLOOP.
+      " Travel USD  - parent  - Total price
+      "Booking EUR -> USD
+      "Booking suppl EUR -> USD
+
+      IF <travel>-CurrencyCode = amount_per_currencycode-currency_code .
+
+        <travel>-TotalPrice += amount_per_currencycode-amount.
+
+      ELSE.
+
+        /dmo/cl_flight_amdp=>convert_currency(
+                 EXPORTING
+                   iv_amount                   =  amount_per_currencycode-amount
+                   iv_currency_code_source     =  amount_per_currencycode-currency_code
+                   iv_currency_code_target     =  <travel>-CurrencyCode
+                   iv_exchange_rate_date       =  cl_abap_context_info=>get_system_date( )
+                 IMPORTING
+                   ev_amount                   = DATA(total_booking_price_per_curr)
+                ).
+
+        <travel>-TotalPrice += total_booking_price_per_curr.
+      ENDIF.
+
+      MODIFY ENTITIES OF zdes_travel_i IN LOCAL MODE
+      ENTITY Travel
+      UPDATE FIELDS ( TotalPrice )
+      WITH CORRESPONDING #( travels ).
+
+
+    ENDLOOP.
 
   ENDMETHOD.
 
@@ -595,6 +602,140 @@ ENDLOOP.
     EXECUTE reCalcTotalprice
     FROM CORRESPONDING #( keys ).
 
+
+  ENDMETHOD.
+
+  METHOD validateCusomer.
+
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+        ENTITY Travel
+        FIELDS ( CustomerId )
+        WITH CORRESPONDING #( keys )
+        RESULT DATA(travels).
+
+
+
+    DATA customers TYPE SORTED TABLE OF /dmo/customer WITH UNIQUE KEY customer_id.
+    customers = CORRESPONDING #( travels DISCARDING DUPLICATES MAPPING customer_id = CustomerId EXCEPT * ).
+
+    SELECT FROM /dmo/customer FIELDS customer_id
+    FOR ALL ENTRIES IN @customers
+    WHERE customer_id = @customers-customer_id
+    INTO TABLE @DATA(valid_customers).
+
+    LOOP AT travels INTO DATA(travel).
+
+
+      IF travel-CustomerId IS NOT INITIAL AND NOT line_exists( valid_customers[ customer_id = travel-CustomerId ] ).
+
+        APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
+
+        APPEND VALUE #( %tky = travel-%tky
+                        %msg = new_message_with_text(
+                                 severity = if_abap_behv_message=>severity-error
+                                 text     = |Not a Valid Customer  { travel-CustomerId }|
+                                )
+                        %element-CustomerId = if_abap_behv=>mk-on
+                               ) TO reported-travel.
+
+
+
+      ENDIF.
+
+
+    ENDLOOP.
+
+
+  ENDMETHOD.
+
+  METHOD validateAgency.
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+        ENTITY Travel
+        FIELDS ( AgencyId )
+        WITH CORRESPONDING #( keys )
+        RESULT DATA(travels).
+
+
+
+    DATA agencies TYPE SORTED TABLE OF /dmo/agency WITH UNIQUE KEY agency_id.
+    agencies = CORRESPONDING #( travels DISCARDING DUPLICATES MAPPING agency_id = AgencyId EXCEPT * ).
+
+    SELECT FROM /dmo/agency FIELDS agency_id
+    FOR ALL ENTRIES IN @agencies
+    WHERE agency_id = @agencies-agency_id
+    INTO TABLE @DATA(valid_agencies).
+
+    LOOP AT travels INTO DATA(travel).
+
+
+      IF travel-AgencyId IS NOT INITIAL AND NOT line_exists( valid_agencies[ agency_id = travel-AgencyId ] ).
+
+        APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
+
+        APPEND VALUE #( %tky = travel-%tky
+                        %msg = new_message_with_text(
+                                 severity = if_abap_behv_message=>severity-error
+                                 text     = |Not a Valid Agency  { travel-AgencyId }|
+                                )
+                        %element-AgencyId = if_abap_behv=>mk-on
+                               ) TO reported-travel.
+
+
+
+      ENDIF.
+
+
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD validateDates.
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+         ENTITY Travel
+         FIELDS ( BeginDate EndDate )
+         WITH CORRESPONDING #( keys )
+         RESULT DATA(travels).
+
+
+    LOOP AT travels INTO DATA(travel).
+      IF travel-BeginDate IS INITIAL.
+        APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
+
+        APPEND VALUE #( %tky = travel-%tky
+                        %msg = new_message_with_text(
+                                 severity = if_abap_behv_message=>severity-error
+                                 text     = |Begin Date should not be blank|
+                                )
+                        %element-BeginDate = if_abap_behv=>mk-on
+                               ) TO reported-travel.
+      ENDIF.
+
+      IF travel-EndDate IS INITIAL.
+        APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
+
+        APPEND VALUE #( %tky = travel-%tky
+                        %msg = new_message_with_text(
+                                 severity = if_abap_behv_message=>severity-error
+                                 text     = |End Date should not be blank|
+                                )
+                        %element-EndDate = if_abap_behv=>mk-on
+                               ) TO reported-travel.
+      ENDIF.
+
+      IF travel-EndDate < travel-BeginDate AND  travel-BeginDate IS NOT INITIAL
+                                           AND  travel-EndDate IS NOT INITIAL.
+
+        APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
+
+        APPEND VALUE #( %tky = travel-%tky
+                        %msg = new_message_with_text(
+                                 severity = if_abap_behv_message=>severity-error
+                                 text     = |End Date should not be less than Begin Date|
+                                )
+                        %element-BeginDate = if_abap_behv=>mk-on
+                        %element-EndDate = if_abap_behv=>mk-on
+                               ) TO reported-travel.
+      ENDIF.
+    ENDLOOP.
 
   ENDMETHOD.
 
