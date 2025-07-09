@@ -21,7 +21,11 @@ use etag
   use action deductDiscount;
   use function GetDefaultsFordeductDiscount;
 
-  use association _Booking { create; with draft;}
+  use action validateCustomerID;
+  use action validateAgencyID;
+  use action validateDatesVal;
+
+  use association _Booking { create; with draft; }
 }
 
 define behavior for ZDES_BOOKING_C alias Booking
@@ -29,8 +33,8 @@ define behavior for ZDES_BOOKING_C alias Booking
   use update;
   use delete;
 
-  use association _Travel { with draft;}
-  use association _BookingSupplement { create; with draft;}
+  use association _Travel { with draft; }
+  use association _BookingSupplement { create; with draft; }
 }
 
 define behavior for ZDES_BKSUPPL_C alias BookingSuppl
@@ -38,6 +42,6 @@ define behavior for ZDES_BKSUPPL_C alias BookingSuppl
   use update;
   use delete;
 
-  use association _Travel { with draft;}
-  use association _Booking{ with draft;}
+  use association _Travel { with draft; }
+  use association _Booking { with draft; }
 }

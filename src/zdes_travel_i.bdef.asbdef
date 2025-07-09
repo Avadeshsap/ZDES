@@ -16,7 +16,9 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   update;  // users can update or edit the existing travels
   delete;  // users can cancel / delete the entrire travel ( incluing its child booking and booksuppl)
   field ( numbering : managed, readonly ) TravelUuid; // non editable field on the fiori screen
-  field ( readonly ) TravelId, OverallStatus;
+  //  field ( readonly ) TravelId, OverallStatus;
+  field ( mandatory : create, readonly : update ) TravelId, OverallStatus;
+  field ( features : instance ) BookingFee;
   association _Booking { create; with draft; } //users can do the bookings to the current travel
 
 
@@ -24,7 +26,12 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
   draft action Discard;
   draft action Resume;
   draft action Activate optimized;
-  draft determine action Prepare;
+  draft determine action Prepare
+  {
+    validation validateCusomer;
+    validation validateAgency;
+    validation validateDates;
+  }
 
 
 
@@ -40,14 +47,19 @@ etag master LocalLastChangedAt   // system detect the latest timestamp and  prev
 
 
   //Actions
-  action acceptTravel result [1] $self;
-  action rejectTravel result [1] $self;
-  action deductDiscount parameter ZDES_A_DISCOUNT result [1] $self { default function GetDefaultsFordeductDiscount; }
+  action ( features : instance ) acceptTravel result [1] $self;
+  action ( features : instance ) rejectTravel result [1] $self;
+  action ( features : instance ) deductDiscount parameter ZDES_A_DISCOUNT result [1] $self { default function GetDefaultsFordeductDiscount; }
   internal action reCalcTotalprice;
 
+  determine action validateCustomerID { validation validateCusomer; }
+  determine action validateAgencyID { validation validateAgency; }
+  determine action validateDatesVal { validation validateDates; }
   side effects
   {
-
+    determine action validateCustomerID executed on field CustomerId affects messages;
+    determine action validateAgencyID executed on field AgencyId affects messages;
+    determine action validateDatesVal executed on field BeginDate, field EndDate affects messages;
     field BookingFee affects field TotalPrice;
 
   }

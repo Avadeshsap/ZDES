@@ -291,6 +291,8 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS validateDates FOR VALIDATE ON SAVE
       IMPORTING keys FOR Travel~validateDates.
+    METHODS get_instance_features FOR INSTANCE FEATURES
+      IMPORTING keys REQUEST requested_features FOR Travel RESULT result.
 
 ENDCLASS.
 
@@ -624,13 +626,16 @@ CLASS lhc_Travel IMPLEMENTATION.
     INTO TABLE @DATA(valid_customers).
 
     LOOP AT travels INTO DATA(travel).
-
+      APPEND VALUE #(  %tky                 = travel-%tky
+                              %state_area          = 'VALIDATE_CUSTOMER'
+                            ) TO reported-travel.
 
       IF travel-CustomerId IS NOT INITIAL AND NOT line_exists( valid_customers[ customer_id = travel-CustomerId ] ).
 
         APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
 
         APPEND VALUE #( %tky = travel-%tky
+        %state_area         = 'VALIDATE_CUSTOMER'
                         %msg = new_message_with_text(
                                  severity = if_abap_behv_message=>severity-error
                                  text     = |Not a Valid Customer  { travel-CustomerId }|
@@ -667,12 +672,15 @@ CLASS lhc_Travel IMPLEMENTATION.
 
     LOOP AT travels INTO DATA(travel).
 
-
+      APPEND VALUE #(  %tky               = travel-%tky
+                            %state_area        = 'VALIDATE_AGENCY'
+                            ) TO reported-travel.
       IF travel-AgencyId IS NOT INITIAL AND NOT line_exists( valid_agencies[ agency_id = travel-AgencyId ] ).
 
         APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
 
         APPEND VALUE #( %tky = travel-%tky
+          %state_area        = 'VALIDATE_AGENCY'
                         %msg = new_message_with_text(
                                  severity = if_abap_behv_message=>severity-error
                                  text     = |Not a Valid Agency  { travel-AgencyId }|
@@ -697,10 +705,13 @@ CLASS lhc_Travel IMPLEMENTATION.
 
 
     LOOP AT travels INTO DATA(travel).
+      APPEND VALUE #(  %tky               = travel-%tky
+                        %state_area        = 'VALIDATE_DATES' ) TO reported-travel.
       IF travel-BeginDate IS INITIAL.
         APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
 
         APPEND VALUE #( %tky = travel-%tky
+          %state_area        = 'VALIDATE_DATES'
                         %msg = new_message_with_text(
                                  severity = if_abap_behv_message=>severity-error
                                  text     = |Begin Date should not be blank|
@@ -713,6 +724,7 @@ CLASS lhc_Travel IMPLEMENTATION.
         APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
 
         APPEND VALUE #( %tky = travel-%tky
+          %state_area        = 'VALIDATE_DATES'
                         %msg = new_message_with_text(
                                  severity = if_abap_behv_message=>severity-error
                                  text     = |End Date should not be blank|
@@ -727,6 +739,7 @@ CLASS lhc_Travel IMPLEMENTATION.
         APPEND VALUE #( %tky = travel-%tky ) TO failed-travel.
 
         APPEND VALUE #( %tky = travel-%tky
+          %state_area        = 'VALIDATE_DATES'
                         %msg = new_message_with_text(
                                  severity = if_abap_behv_message=>severity-error
                                  text     = |End Date should not be less than Begin Date|
@@ -736,6 +749,41 @@ CLASS lhc_Travel IMPLEMENTATION.
                                ) TO reported-travel.
       ENDIF.
     ENDLOOP.
+
+  ENDMETHOD.
+
+  METHOD get_instance_features.
+
+    READ ENTITIES OF zdes_travel_i IN LOCAL MODE
+           ENTITY Travel
+           FIELDS ( OverallStatus )
+           WITH CORRESPONDING #( keys )
+           RESULT DATA(travels).
+
+
+    result = VALUE #( FOR ls_travel IN travels
+                       ( %tky = ls_travel-%tky
+                         %field-BookingFee = COND #( WHEN ls_travel-OverallStatus = 'A'
+                                                      THEN if_abap_behv=>fc-f-read_only
+                                                      ELSE if_abap_behv=>fc-f-unrestricted )
+
+
+                         %action-acceptTravel = COND #( WHEN ls_travel-OverallStatus = 'A'
+                                                      THEN if_abap_behv=>fc-o-disabled
+                                                      ELSE if_abap_behv=>fc-o-enabled )
+
+                         %action-rejectTravel = COND #( WHEN ls_travel-OverallStatus = 'R'
+                                                      THEN if_abap_behv=>fc-o-disabled
+                                                      ELSE if_abap_behv=>fc-o-enabled )
+
+                          %action-deductdiscount = COND #( WHEN ls_travel-OverallStatus = 'A'
+                                                      THEN if_abap_behv=>fc-o-disabled
+                                                      ELSE if_abap_behv=>fc-o-enabled )
+                          ) ).
+
+
+
+
 
   ENDMETHOD.
 
