@@ -45,6 +45,7 @@ annotate entity ZDES_TRAVEL_C with
 
   @UI:{ lineItem: [{ position: 30, importance: #HIGH }] }
   @UI:{ identification: [{ position: 30, importance: #HIGH }] }
+  @Consumption.valueHelpDefinition: [{ entity:{ name: '/DMO/I_Customer_StdVH', element: 'CustomerID' },useForValidation: true }]
   CustomerId;
 
   @UI:{ lineItem: [{ position: 40, importance: #HIGH }] }
