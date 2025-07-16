@@ -6,6 +6,7 @@ with draft;
 
 define behavior for ZDES_TRAVEL_I alias Travel
 persistent table zdes_travel
+with additional save
 draft table zdes_d_travel
 lock master
 total etag LastChangedAt
